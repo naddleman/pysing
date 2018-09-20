@@ -3,23 +3,27 @@
 perhaps to be extended
 """
 from PIL import Image
+from datetime import datetime
 import numpy as np
-import random, os 
+import random, os
 
 # constants
 # coupling strength is inverse temperature K = 1/T
 # or beta = 1 / (k_B * T)
-lattice_size = (600, 800) # h, w in image
+lattice_size = (300, 400) # h, w in image
 lattice = np.random.randint(2, size=lattice_size)
 lattice[lattice == 0] = -1
-iterations = 100000
-beta = 10
-
-
+iterations = 50000
+frames = 300
+beta_crit = np.log(1 + 2 ** (1/2)) / 2
+beta = 15
+current_time = datetime.now().strftime('%Y-%m-%d-%H%M%S')
+filename = f"{current_time}-beta-{beta}-"
 
 # pick a site at uniform
 def pick_site(lat):
-    (x,y) = (np.random.randint(lat.shape[0]), np.random.randint(lat.shape[1]))
+    (x,y) = (np.random.randint(lat.shape[0]),
+             np.random.randint(lat.shape[1]))
     return (x,y)
 
 #adjacent sites on 2d flat torus
@@ -82,47 +86,18 @@ def draw_lattice(lat):
 # quench random lattice
 img1 = draw_lattice(lattice)
 imglist = []
-for j in range(1000):
+for j in range(frames):
     for i in range(iterations):
         point = pick_site(lattice)
         update_lattice(lattice, point, beta)
     imglist.append(draw_lattice(lattice))
 
 img2 = draw_lattice(lattice)
-img1.show()
-img2.show()
-img1.save("test2.gif", save_all=True, append_images=imglist, duration=100,
-          loop=0)
-## vector (-1, 1) -> bw image
-#def vec_to_img(vec, dims):
-#    assert (dims[0] * dims[1] == vec.size),"vector size must mage output image"
-#    arr = vec.reshape(dims)
-#    imgarr = np.zeros(arr.shape, dtype = np.uint8)
-#    imgarr[arr == 1] = 255
-#    img = Image.fromarray(imgarr, mode="L")
-#    return img
-#
-#
-## turns all images in training directory into vectors
-## Dir -> [Vec]
-#def read_dir(dir, dims, threshold): 
-#    files = os.listdir(dir)
-#    vecs = np.zeros((len(files), dims[0]*dims[1]))
-#    paths = []
-#    for i in range(len(files)):
-#        vecs[i]= vectorize_image(dir+ "/"+ files[i], dims, threshold)
-#    return vecs
-#
-## generates weight matrix from directory of training images, Hebbian learning
-#def hebbianWeights(vecs):
-#    W = np.zeros((len(vecs[0]), len(vecs[0])))
-#    for i in range(len(vecs)):
-#        slice = vecs[i:(i+1),:]
-#        W += np.dot(slice.T, slice)
-#    W -= len(vecs) * np.identity(len(vecs[0]))
-#    return W
-#    
-## Updates vector according to weight matrix
-#def update_vector(vec, iterations):
-#
-#    return outvec
+#img1.show()
+#img2.show()
+img1.save((filename + ".gif"), save_all=True, append_images=imglist,
+          duration=50, loop=0)
+
+with open((filename + ".txt"), "w") as txt:
+    print(f"Beta:  {beta}\nIterations per frame:  {iterations}\n"
+          f"Frames:  {frames}\nSize:  {lattice_size}", file=txt)

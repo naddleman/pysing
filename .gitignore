@@ -3,4 +3,5 @@
 *.png
 *.gif
 *.swp
+*.txt
 __pycache__/
