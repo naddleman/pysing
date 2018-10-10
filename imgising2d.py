@@ -2,23 +2,43 @@
 2d Ising Ferromagnet (on torus)
 perhaps to be extended
 """
-from PIL import Image
+from PIL import Image, ImageMath, ImageMode
 from datetime import datetime
 import numpy as np
-import random, os
+import random, os, sys
+
+R, G, B = 0, 1, 2
+photofile = Image.open(sys.argv[1])
+img = photofile.split()
+(xdim, ydim) = photofile.size
+threshold = 96
+
+def to_arrays(openfile, thresh):
+    photo= openfile
+    img = photo.split()
+    (xdim, ydim) = photo.size
+    imgarr = []
+    arrays = []
+    for i in range(3):
+        imgarr.append(np.array(img[i]))
+        arrays.append(np.ones(imgarr[i].shape))
+        arrays[i][imgarr[i] < thresh] = -1
+    return arrays
+
 
 # constants
 # coupling strength is inverse temperature K = 1/T
 # or beta = 1 / (k_B * T)
-lattice_size = (600, 800) # h, w in image
+lattice_size = (ydim, xdim) # h, w in image
+lattices = to_arrays(photofile, threshold)
 lattice = np.random.randint(2, size=lattice_size)
 lattice[lattice == 0] = -1
-iterations = 5000000
-frames = 50
+iterations = 50000
+frames = 40
 beta_crit = np.log(1 + 2 ** (1/2)) / 2
-beta = beta_crit #15
+beta = .25 #15
 current_time = datetime.now().strftime('%Y-%m-%d-%H%M%S')
-filename = f"{current_time}-beta-{beta}-"
+filename = f"{current_time}-beta-{beta}-imgfun"
 
 # pick a site at uniform
 def pick_site(lat):
@@ -82,21 +102,36 @@ def draw_lattice(lat):
     img = Image.fromarray(imgarr, mode="L")
     return img
 
+def draw_lattices(lats):
+    imgarr = []
+    imgs = []
+    for i in range(3):
+        imgarr.append(np.zeros(lattice_size, dtype=np.uint8))
+        imgarr[i][lats[i] == 1] = 255
+        imgs.append(Image.fromarray(imgarr[i], mode="L"))
+    img = Image.merge("RGB", (imgs[0], imgs[1], imgs[2]))
+    return img
+
+
 
 # quench random lattice
-img1 = draw_lattice(lattice)
+#img1 = draw_lattices(lattices)
 imglist = []
 for j in range(frames):
     for i in range(iterations):
-        point = pick_site(lattice)
-        update_lattice(lattice, point, beta)
-    imglist.append(draw_lattice(lattice))
-
-img2 = draw_lattice(lattice)
+        layer = np.random.randint(3)
+        point = pick_site(lattices[layer])
+        update_lattice(lattices[layer], point, beta)
+    imglist.append(draw_lattices(lattices))
+imglist.reverse()
+for i in range(5):
+    imglist.append(imglist[-1]) #delay final product
+img1 = imglist[0]
+#img2 = draw_lattice(lattice)
 #img1.show()
 #img2.show()
 img1.save((filename + ".gif"), save_all=True, append_images=imglist,
-          duration=50, loop=0)
+          duration=60, loop=0)
 
 with open((filename + ".txt"), "w") as txt:
     print(f"Beta:  {beta}\nIterations per frame:  {iterations}\n"
